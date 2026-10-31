@@ -1,6 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../features/auth/login_page.dart';
 import '../features/dashboard/admin_shell.dart';
+import '../repositories/auth_repository.dart';
 import 'theme.dart';
 
 class RobocekAdminApp extends StatelessWidget {
@@ -15,8 +18,38 @@ class RobocekAdminApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: buildRobocekTheme(),
       home: initializationError == null
-          ? const AdminShell()
+          ? const _AuthGate()
           : FirebaseErrorPage(error: initializationError!),
+    );
+  }
+}
+
+class _AuthGate extends StatefulWidget {
+  const _AuthGate();
+
+  @override
+  State<_AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<_AuthGate> {
+  final _authRepo = AuthRepository();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: _authRepo.authStateChanges,
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final user = snap.data;
+        if (user != null && user.email?.trim().toLowerCase() == kAdminEmail) {
+          return const AdminShell();
+        }
+        return const LoginPage();
+      },
     );
   }
 }
